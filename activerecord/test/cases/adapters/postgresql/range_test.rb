@@ -70,6 +70,15 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
                  float_range: "[0.5,]")
 
     insert_range(id: 104,
+                 date_range: "[''2012-01-02'',)",
+                 num_range: "[0.1,)",
+                 ts_range: "[''2010-01-01 14:30'',)",
+                 tstz_range: "[''2010-01-01 14:30:00+05'',)",
+                 int4_range: "[1,)",
+                 int8_range: "[10,)",
+                 float_range: "[0.5,)")
+
+    insert_range(id: 105,
                  date_range: "[,]",
                  num_range: "[,]",
                  ts_range: "[,]",
@@ -78,7 +87,7 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
                  int8_range: "[,]",
                  float_range: "[,]")
 
-    insert_range(id: 105,
+    insert_range(id: 106,
                  date_range: "[''2012-01-02'', ''2012-01-02'')",
                  num_range: "[0.1, 0.1)",
                  ts_range: "[''2010-01-01 14:30'', ''2010-01-01 14:30'')",
@@ -92,7 +101,8 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
     @second_range = PostgresqlRange.find(102)
     @third_range = PostgresqlRange.find(103)
     @fourth_range = PostgresqlRange.find(104)
-    @empty_range = PostgresqlRange.find(105)
+    @fifth_range = PostgresqlRange.find(105)
+    @empty_range = PostgresqlRange.find(106)
   end
 
   teardown do
@@ -115,7 +125,8 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
     assert_equal 1...11, @first_range.int4_range
     assert_equal 1...10, @second_range.int4_range
     assert_equal 1...Float::INFINITY, @third_range.int4_range
-    assert_equal(-Float::INFINITY...Float::INFINITY, @fourth_range.int4_range)
+    assert_equal 1..Float::INFINITY, @fourth_range.int4_range
+    assert_equal(-Float::INFINITY...Float::INFINITY, @fifth_range.int4_range)
     assert_nil @empty_range.int4_range
   end
 
@@ -123,23 +134,25 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
     assert_equal 10...101, @first_range.int8_range
     assert_equal 10...100, @second_range.int8_range
     assert_equal 10...Float::INFINITY, @third_range.int8_range
-    assert_equal(-Float::INFINITY...Float::INFINITY, @fourth_range.int8_range)
+    assert_equal 10..Float::INFINITY, @fourth_range.int8_range
+    assert_equal(-Float::INFINITY...Float::INFINITY, @fifth_range.int8_range)
     assert_nil @empty_range.int8_range
   end
 
-  def test_daterange_values
+  def test_daterange_values_excluding_end
     assert_equal Date.new(2012, 1, 2)...Date.new(2012, 1, 5), @first_range.date_range
     assert_equal Date.new(2012, 1, 2)...Date.new(2012, 1, 4), @second_range.date_range
     assert_equal Date.new(2012, 1, 2)...Float::INFINITY, @third_range.date_range
-    assert_equal(-Float::INFINITY...Float::INFINITY, @fourth_range.date_range)
+    assert_equal Date.new(2012, 1, 2)..Float::INFINITY, @fourth_range.date_range
+    assert_equal(-Float::INFINITY...Float::INFINITY, @fifth_range.date_range)
     assert_nil @empty_range.date_range
   end
 
   def test_numrange_values
     assert_equal BigDecimal("0.1")..BigDecimal("0.2"), @first_range.num_range
     assert_equal BigDecimal("0.1")...BigDecimal("0.2"), @second_range.num_range
-    assert_equal BigDecimal("0.1")...BigDecimal("Infinity"), @third_range.num_range
-    assert_equal BigDecimal("-Infinity")...BigDecimal("Infinity"), @fourth_range.num_range
+    assert_equal BigDecimal("0.1")..BigDecimal("Infinity"), @fourth_range.num_range
+    assert_equal BigDecimal("-Infinity")...BigDecimal("Infinity"), @fifth_range.num_range
     assert_nil @empty_range.num_range
   end
 
@@ -148,7 +161,8 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
     assert_equal Time.public_send(tz, 2010, 1, 1, 14, 30, 0)..Time.public_send(tz, 2011, 1, 1, 14, 30, 0), @first_range.ts_range
     assert_equal Time.public_send(tz, 2010, 1, 1, 14, 30, 0)...Time.public_send(tz, 2011, 1, 1, 14, 30, 0), @second_range.ts_range
     assert_equal Time.public_send(tz, 2010, 1, 1, 14, 30, 0)...nil, @third_range.ts_range
-    assert_equal(-Float::INFINITY...Float::INFINITY, @fourth_range.ts_range)
+    assert_equal Time.public_send(tz, 2010, 1, 1, 14, 30, 0)..nil, @fourth_range.ts_range
+    assert_equal(-Float::INFINITY...Float::INFINITY, @fifth_range.ts_range)
     assert_nil @empty_range.ts_range
   end
 
@@ -156,7 +170,8 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
     assert_equal Time.parse("2010-01-01 09:30:00 UTC")..Time.parse("2011-01-01 17:30:00 UTC"), @first_range.tstz_range
     assert_equal Time.parse("2010-01-01 09:30:00 UTC")...Time.parse("2011-01-01 17:30:00 UTC"), @second_range.tstz_range
     assert_equal Time.parse("2010-01-01 09:30:00 UTC")...nil, @third_range.tstz_range
-    assert_equal(-Float::INFINITY...Float::INFINITY, @fourth_range.tstz_range)
+    assert_equal Time.parse("2010-01-01 09:30:00 UTC")..nil, @fourth_range.tstz_range
+    assert_equal(-Float::INFINITY...Float::INFINITY, @fifth_range.tstz_range)
     assert_nil @empty_range.tstz_range
   end
 
@@ -164,7 +179,8 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
     assert_equal 0.5..0.7, @first_range.float_range
     assert_equal 0.5...0.7, @second_range.float_range
     assert_equal 0.5...Float::INFINITY, @third_range.float_range
-    assert_equal(-Float::INFINITY...Float::INFINITY, @fourth_range.float_range)
+    assert_equal 0.5..Float::INFINITY, @fourth_range.float_range
+    assert_equal(-Float::INFINITY...Float::INFINITY, @fifth_range.float_range)
     assert_nil @empty_range.float_range
   end
 
@@ -276,8 +292,13 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
                             Time.parse("-1000-01-01 14:30:00 CDT")...Time.parse("2020-02-02 14:30:00 CET"))
   end
 
-  def test_unbounded_tstzrange
+  def test_unbounded_tstzrange_exclusive
     assert_equal_round_trip @first_range, :tstz_range, Time.parse("2010-01-01 14:30:00 CDT")...nil
+    assert_equal_round_trip @first_range, :tstz_range, nil...Time.parse("2010-01-01 14:30:00 CDT")
+  end
+
+  def test_unbounded_tstzrange_inclusive
+    assert_equal_round_trip @first_range, :tstz_range, Time.parse("2010-01-01 14:30:00 CDT")..nil
     assert_equal_round_trip @first_range, :tstz_range, nil..Time.parse("2010-01-01 14:30:00 CDT")
   end
 
@@ -301,9 +322,14 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
                             Time.public_send(tz, -1000, 1, 1, 14, 30, 0)...Time.public_send(tz, 2020, 2, 2, 14, 30, 0))
   end
 
-  def test_unbounded_tsrange
+  def test_unbounded_tsrange_exclusive
     tz = ::ActiveRecord.default_timezone
     assert_equal_round_trip @first_range, :ts_range, Time.public_send(tz, 2010, 1, 1, 14, 30, 0)...nil
+    assert_equal_round_trip @first_range, :ts_range, nil...Time.public_send(tz, 2010, 1, 1, 14, 30, 0)
+  end
+
+  def test_unbounded_tsrange_inclusive
+    assert_equal_round_trip @first_range, :ts_range, Time.public_send(tz, 2010, 1, 1, 14, 30, 0)..nil
     assert_equal_round_trip @first_range, :ts_range, nil..Time.public_send(tz, 2010, 1, 1, 14, 30, 0)
   end
 
@@ -378,8 +404,27 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
       to_time_string = (from_time + 1.hour).to_s
       to_time = Time.zone.parse(to_time_string)
 
-      record = PostgresqlRange.new(ts_ranges: [from_time_string...to_time_string, from_time_string..to_time_string, from_time_string..., ..to_time_string])
-      assert_equal [from_time...to_time, from_time..to_time, from_time..., ..to_time], record.ts_ranges
+      record = PostgresqlRange.new(
+        ts_ranges: [
+          from_time_string...to_time_string,
+          from_time_string..to_time_string,
+          from_time_string...,
+          from_time_string..,
+          ...to_time_string,
+          ..to_time_string
+        ]
+      )
+      assert_equal(
+        [
+          from_time...to_time,
+          from_time..to_time,
+          from_time...,
+          from_time..,
+          ...to_time,
+          ..to_time
+        ],
+        record.ts_ranges
+      )
       record.ts_ranges.each do |range|
         assert_equal ActiveSupport::TimeZone[tz], range.begin.time_zone if range.begin
         assert_equal ActiveSupport::TimeZone[tz], range.end.time_zone if range.end
@@ -388,7 +433,17 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
       record.save!
       record.reload
 
-      assert_equal [from_time...to_time, from_time..to_time, from_time..., ..to_time], record.ts_ranges
+      assert_equal(
+        [
+          from_time...to_time,
+         from_time..to_time,
+         from_time...,
+         from_time..,
+          ...to_time,
+          ..to_time
+        ],
+        record.ts_ranges
+      )
       record.ts_ranges.each do |range|
         assert_equal ActiveSupport::TimeZone[tz], range.begin.time_zone if range.begin
         assert_equal ActiveSupport::TimeZone[tz], range.end.time_zone if range.end
@@ -531,10 +586,10 @@ class PostgresqlRangeTest < ActiveRecord::PostgreSQLTestCase
   def test_ranges_correctly_unescape_output
     @connection.execute(<<~SQL)
       INSERT INTO postgresql_ranges (id, string_range)
-      VALUES (106, '["ca""t","do\\\\g")')
+      VALUES (107, '["ca""t","do\\\\g")')
     SQL
 
-    escaped_range = PostgresqlRange.find(106)
+    escaped_range = PostgresqlRange.find(107)
     assert_equal('ca"t'...'do\\g', escaped_range.string_range)
   end
 
